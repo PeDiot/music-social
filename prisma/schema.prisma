@@ -7,10 +7,12 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
+  // Pooled connection for runtime queries.
   url       = env("DATABASE_URL")
-  // Neon pooled connections need a direct URL for migrations.
-  // Locally, leave DIRECT_URL unset and Prisma will fall back to DATABASE_URL.
-  directUrl = env("DIRECT_URL")
+  // Direct (non-pooled) connection for migrations.
+  // On Vercel + Neon this is auto-injected by the marketplace integration.
+  // Locally, set it to the same value as DATABASE_URL.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
