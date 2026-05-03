@@ -1,0 +1,63 @@
+// Music Social — Prisma schema
+// Run `npx prisma migrate dev` after starting Postgres (see docker-compose.yml)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon pooled connections need a direct URL for migrations.
+  // Locally, leave DIRECT_URL unset and Prisma will fall back to DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  name      String?
+  password  String
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts Post[]
+
+  @@index([username])
+}
+
+enum ReleaseType {
+  SINGLE
+  EP
+  ALBUM
+}
+
+model Post {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Snapshot of the track at post time (avoids stale re-fetches)
+  trackId     String // ex "deezer:3135556"
+  trackTitle  String
+  artistName  String
+  artistId    String?
+  albumTitle  String
+  albumId     String?
+  coverUrl    String
+  previewUrl  String
+  releaseType ReleaseType
+  durationSec Int
+  releaseYear Int?
+
+  rating Float // 0.5 .. 5.0 (step 0.5)
+  review String? @db.VarChar(280)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@index([trackId])
+}
