@@ -1,6 +1,6 @@
 # Resound
 
-A small social network for music: post the tracks you're listening to with a rating, play 30s previews, and discover what others are listening to. Apple Music-inspired UI.
+A minimal social network for music: post the tracks you're listening to with a rating, play 30s previews, and discover what others are listening to. Apple Music-inspired UI.
 
 ## Stack
 
