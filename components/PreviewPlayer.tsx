@@ -9,16 +9,20 @@ type Variant = "overlay" | "compact" | "large";
 
 export function PreviewPlayer({
   url,
+  trackId,
   variant = "overlay",
   label,
   className,
 }: {
   url: string | null | undefined;
+  trackId?: string | null;
   variant?: Variant;
   label?: string;
   className?: string;
 }) {
-  const { isPlaying, progress, canPlay, toggle } = usePreviewPlayer(url);
+  const { isPlaying, progress, canPlay, toggle } = usePreviewPlayer(url, {
+    trackId,
+  });
   if (!canPlay) return null;
 
   const sizeBtn =
