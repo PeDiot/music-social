@@ -9,6 +9,7 @@ import { RatingStars } from "@/components/RatingStars";
 
 export type PostCardData = {
   id: string;
+  trackId: string;
   trackTitle: string;
   artistName: string;
   albumTitle: string;
@@ -83,7 +84,11 @@ export function PostCard({ post }: { post: PostCardData }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
         <div className="absolute bottom-3 left-3">
-          <PreviewPlayer url={post.previewUrl} variant="overlay" />
+          <PreviewPlayer
+            url={post.previewUrl}
+            trackId={post.trackId}
+            variant="overlay"
+          />
         </div>
       </div>
 
