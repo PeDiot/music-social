@@ -93,7 +93,11 @@ git push -u origin main
 - "Deployments" tab → "..." menu on the latest deployment → "Redeploy"
 - The build script `prisma migrate deploy && next build` will create the `User` and `Post` tables automatically
 
-### Inspect the prod DB locally
+### Inspect the prod DB
+
+#### On [Neon](https://console.neon.tech/app/projects/proud-fire-07972238)
+
+#### On local machine
 
 ```bash
 # Pull Vercel env vars locally
