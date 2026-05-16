@@ -114,4 +114,3 @@ export async function getTrack(deezerId: number): Promise<NormalizedTrack | null
   }
 }
 
-export { DeezerApiError };
