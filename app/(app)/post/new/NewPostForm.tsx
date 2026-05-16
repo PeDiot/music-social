@@ -71,7 +71,11 @@ export function NewPostForm() {
                 {track.releaseYear ? ` · ${track.releaseYear}` : ""}
               </p>
               <div className="mt-3">
-                <PreviewPlayer url={track.previewUrl} variant="compact" />
+                <PreviewPlayer
+                  url={track.previewUrl}
+                  trackId={track.id}
+                  variant="compact"
+                />
               </div>
             </div>
             <button

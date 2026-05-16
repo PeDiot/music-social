@@ -10,6 +10,8 @@ import {
   useState,
 } from "react";
 
+import { refreshPreviewUrl } from "@/features/deezer/actions";
+
 type AudioState = {
   currentUrl: string | null;
   isPlaying: boolean;
@@ -17,29 +19,69 @@ type AudioState = {
 };
 
 type AudioActions = {
-  toggle: (url: string) => void;
+  toggle: (url: string) => Promise<boolean>;
   stop: () => void;
 };
 
 const AudioContext = createContext<(AudioState & AudioActions) | null>(null);
 
+function waitForCanPlay(el: HTMLAudioElement): Promise<boolean> {
+  if (el.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+    return Promise.resolve(true);
+  }
+  return new Promise((resolve) => {
+    const cleanup = () => {
+      el.removeEventListener("canplay", onReady);
+      el.removeEventListener("error", onError);
+    };
+    const onReady = () => {
+      cleanup();
+      resolve(true);
+    };
+    const onError = () => {
+      cleanup();
+      resolve(false);
+    };
+    el.addEventListener("canplay", onReady, { once: true });
+    el.addEventListener("error", onError, { once: true });
+    el.load();
+  });
+}
+
+async function attemptPlay(el: HTMLAudioElement): Promise<boolean> {
+  try {
+    await el.play();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function AudioProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentUrlRef = useRef<string | null>(null);
+  const isPlayingRef = useRef(false);
   const [currentUrl, setCurrentUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  // Lazy create the singleton <audio> element on the client only
   const getAudio = useCallback(() => {
     if (typeof window === "undefined") return null;
     if (!audioRef.current) {
       const el = new Audio();
       el.preload = "none";
-      el.crossOrigin = "anonymous";
       audioRef.current = el;
     }
     return audioRef.current;
   }, []);
+
+  useEffect(() => {
+    currentUrlRef.current = currentUrl;
+  }, [currentUrl]);
+
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
 
   useEffect(() => {
     const el = getAudio();
@@ -69,22 +111,38 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     };
   }, [getAudio]);
 
-  const toggle = useCallback(
-    (url: string) => {
+  const playUrl = useCallback(
+    async (url: string): Promise<boolean> => {
       const el = getAudio();
-      if (!el) return;
-      if (currentUrl === url && isPlaying) {
-        el.pause();
-        return;
-      }
-      if (currentUrl !== url) {
+      if (!el) return false;
+
+      if (currentUrlRef.current !== url) {
         el.src = url;
+        currentUrlRef.current = url;
         setCurrentUrl(url);
         setProgress(0);
       }
-      void el.play().catch(() => setIsPlaying(false));
+
+      if (await attemptPlay(el)) return true;
+      if (!(await waitForCanPlay(el))) return false;
+      return attemptPlay(el);
     },
-    [currentUrl, isPlaying, getAudio],
+    [getAudio],
+  );
+
+  const toggle = useCallback(
+    async (url: string): Promise<boolean> => {
+      const el = getAudio();
+      if (!el) return false;
+
+      if (currentUrlRef.current === url && isPlayingRef.current) {
+        el.pause();
+        return true;
+      }
+
+      return playUrl(url);
+    },
+    [getAudio, playUrl],
   );
 
   const stop = useCallback(() => {
@@ -92,6 +150,8 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     if (!el) return;
     el.pause();
     el.currentTime = 0;
+    currentUrlRef.current = null;
+    setCurrentUrl(null);
     setIsPlaying(false);
     setProgress(0);
   }, [getAudio]);
@@ -110,15 +170,42 @@ export function useAudio() {
   return ctx;
 }
 
-export function usePreviewPlayer(url: string | null | undefined) {
+export function usePreviewPlayer(
+  url: string | null | undefined,
+  options?: { trackId?: string | null },
+) {
   const { currentUrl, isPlaying, progress, toggle } = useAudio();
-  const isCurrent = !!url && currentUrl === url;
+  const trackId = options?.trackId;
+  const [refreshed, setRefreshed] = useState<{
+    source: string;
+    preview: string;
+  } | null>(null);
+
+  const resolvedUrl = useMemo(() => {
+    if (!url) return null;
+    if (refreshed?.source === url) return refreshed.preview;
+    return url;
+  }, [url, refreshed]);
+
+  const isCurrent = !!resolvedUrl && currentUrl === resolvedUrl;
+
+  const play = useCallback(async () => {
+    if (!resolvedUrl) return;
+
+    if (await toggle(resolvedUrl)) return;
+    if (!trackId || !url) return;
+
+    const fresh = await refreshPreviewUrl(trackId);
+    if (!fresh || fresh === resolvedUrl) return;
+
+    setRefreshed({ source: url, preview: fresh });
+    await toggle(fresh);
+  }, [resolvedUrl, url, toggle, trackId]);
+
   return {
     isPlaying: isCurrent && isPlaying,
     progress: isCurrent ? progress : 0,
-    canPlay: !!url,
-    toggle: () => {
-      if (url) toggle(url);
-    },
+    canPlay: !!resolvedUrl,
+    toggle: play,
   };
 }
