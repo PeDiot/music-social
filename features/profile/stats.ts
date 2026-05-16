@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 export type TopArtist = {
   artistName: string;
-  artistId: string | null;
   count: number;
   averageRating: number;
   coverUrl: string;
@@ -13,7 +12,6 @@ export type TopArtist = {
 export type TopAlbum = {
   albumTitle: string;
   artistName: string;
-  albumId: string | null;
   count: number;
   averageRating: number;
   coverUrl: string;
@@ -44,7 +42,7 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
       _avg: { rating: true },
     }),
     prisma.post.groupBy({
-      by: ["artistName", "artistId"],
+      by: ["artistName"],
       where: { userId },
       _count: { _all: true },
       _avg: { rating: true },
@@ -52,7 +50,7 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
       take: 3,
     }),
     prisma.post.groupBy({
-      by: ["albumTitle", "artistName", "albumId"],
+      by: ["albumTitle", "artistName"],
       where: { userId },
       _count: { _all: true },
       _avg: { rating: true },
@@ -95,7 +93,6 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
     averageRating: aggregate._avg.rating ?? null,
     topArtists: artists.map((a) => ({
       artistName: a.artistName,
-      artistId: a.artistId,
       count: a._count._all,
       averageRating: a._avg.rating ?? 0,
       coverUrl: coverByArtist.get(a.artistName) ?? "",
@@ -103,7 +100,6 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
     topAlbums: albums.map((a) => ({
       albumTitle: a.albumTitle,
       artistName: a.artistName,
-      albumId: a.albumId,
       count: a._count._all,
       averageRating: a._avg.rating ?? 0,
       coverUrl: coverByAlbum.get(`${a.artistName}::${a.albumTitle}`) ?? "",
