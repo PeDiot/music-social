@@ -41,14 +41,6 @@ export default async function FeedPage() {
           initialNextCursor={initial.nextCursor}
         />
       )}
-
-      <Link
-        href="/post/new"
-        aria-label="Publier"
-        className="fixed bottom-20 md:bottom-8 right-6 z-30 inline-flex items-center justify-center size-14 rounded-full bg-rose-500 text-white shadow-soft hover:bg-rose-600 active:scale-95 transition"
-      >
-        <Plus className="size-6" />
-      </Link>
     </div>
   );
 }
